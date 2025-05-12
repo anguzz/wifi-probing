@@ -5,22 +5,23 @@ This repo is a CLI-based exploration into wireless probe request capturing and g
 # Directory structure
 
 WiFi-Probing/
-├── .env                       
+├── .env                          
 ├── .gitignore
-├── readme.md                 
-├── __pycache__/               
-├── linux/                    
-│   ├── capture.py            
-│       └── probe_requests_log.csv  (generated file) 
-│   ├── configure_nic.sh      
-│   └── run_wigle_on_csv.py   
-│       └──  probe_requests_with_wigle_loc.csv (generated file) 
-├── windows/                   
-│   ├── capture.py           
-│   └── configure_nic_windows.ps1  
-├── utils/
-│   ├── mac-vendor.txt         
-│   └── requirements.txt       
+├── readme.md                   
+├── __pycache__/                  
+├── linux/                        
+│   ├── capture.py                
+│   │   └── probe_requests_log.csv             
+│   ├── configure_nic.sh          
+│   └── run_wigle_on_csv.py       
+│       └── probe_requests_with_wigle_loc.csv (generated) 
+├── windows/                      
+│   ├── capture.py                
+│   └── configure_nic_windows.ps1 (generated) 
+├── utils/                        
+│   ├── mac-vendor.txt            
+│   └── requirements.txt          
+
 
 
 # Usage Notes
