@@ -8,7 +8,7 @@ import itertools
 from scapy.all import sniff, Dot11, Dot11ProbeReq, RadioTap
 
 # --- Configuration ---
-IFACE = "wlan0" #for example, add your interface
+IFACE = "wlp0s20f3mon" #for example, add your interface
 CHANNELS_2_4GHZ = list(range(1, 15))
 CHANNELS_5GHZ = [36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165]
 CHANNELS_TO_SCAN = CHANNELS_2_4GHZ  + CHANNELS_5GHZ
@@ -19,7 +19,10 @@ VENDOR_DICT = {}
 channel_lock = threading.Lock()
 current_channel_index = 0
 
-def load_mac_vendors(filepath=os.path.join(os.path.dirname(__file__), "..", "utils", "mac-vendor.txt")):
+def load_mac_vendors(filepath=None):
+    if filepath is None:
+        filepath = os.path.join(os.path.dirname(__file__), "..", "utils", "mac-vendor.txt")
+
     vendors = {}
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
@@ -33,9 +36,9 @@ def load_mac_vendors(filepath=os.path.join(os.path.dirname(__file__), "..", "uti
                     vendor = parts[1].strip()
                     if len(oui) == 6:
                         vendors[oui] = vendor
-        print(f"[INFO] Loaded {len(vendors)} MAC vendor prefixes.")
+        print(f"[INFO] Loaded {len(vendors)} MAC vendor prefixes from {filepath}")
     except Exception as e:
-        print(f"[ERROR] Could not load vendor file: {e}")
+        print(f"[ERROR] Could not load vendor file '{filepath}': {e}")
     return vendors
 
 def lookup_vendor(mac, vendors_dict):

@@ -1,2 +1,4 @@
 __pycache__
 .env
+linux/probe_requests_log.csv
+windows/probe_requests_log.csv
