@@ -39,9 +39,11 @@ Currently was able to run the python3 files and get valid entries and coordinate
 - Similar to the (https://github.com/mgp25/Probe-Hunter) repo  I want to send captured SSIDs to the WiGLE API in real time, I have two options for this.
  1) Use a NIC that supports Virtual Functions (VFs) (e.g., via iw and mac80211 with proper driver support)
  2) Use a dedicated second wireless card or USB dongle, one for monitoring, the other for staying connected to the internet.
+ 3) I was messing with this and manually filtering out the wildcard/blank SSIDs logged in our CSV adds too much overhead. I'm going add logic on capture.py so we don't log any of these in the csv file.  
 
-##  Windows
-I have not created the capture.py file for Windows yet. I am still looking into if it's possible to do this via command line. The main issue is  Windows can't channel hop with `Airmon-ng`. I have to look into if other ways are possible.
+##  Windows 
+- (work in progress)
+I created a capture.py file for Windows. After configuring the network interface to be in monitor mode, using `WlanHelper Wi-Fi mode monitor`  I'm still looking into if its possible to channel hop since we can't use `Airmon-ng`. I have to look into if other ways are possible or if there is a work around. Currently the capture.py will not pick up anything despite being in monitor mode. 
 
 
 
@@ -54,9 +56,18 @@ I have not created the capture.py file for Windows yet. I am still looking into 
 - Using Scapy instead of tcpdump for packet capture and analysis because it simplifies parsing directly in Python.
 - Scapy provides native access to packet fields, makes processing Wi-Fi probe requests simpler then tcpdump outputs
 - Windows does not offer channel hopping as easily through libraries like `Airmon-ng`
+- Downloading the npcap on windows doesn't put the network card in monitor mode by default, you have to go to `C:\Windows\System32\Npcap\WlanHelper.exe` and calling `WlanHelper Wi-Fi mode monitor`
 - Monitor Mode: wireless NIC can only passively listen to all 802.11 traffic in the air. Has no output connection though
 - Managed Mode: Standard mode for network connections
 
+# helper commands
+windows:
+- `netsh wlan show interfaces` 
+- `netsh wlan show wirelesscapabilities`
+- `WlanHelper Wi-Fi mode managed` 
+- `WlanHelper Wi-Fi mode`
+
+linux: 
 
 # References
 Some stuff I read while tinkering with this. 
@@ -70,4 +81,7 @@ Some stuff I read while tinkering with this.
 - [A question about channel hopping on monitor mode (probe requests with scapy)](https://www.reddit.com/r/AskNetsec/comments/gq7f1b/a_question_about_channel_hopping_on_monitor_mode/) 
 -  [802.11: Probe request/response packets? ](https://www.reddit.com/r/networking/comments/2n5o6x/80211_probe_requestresponse_packets/)  
 - [ List of MAC addresses with vendors identities ](https://gist.github.com/aallan/b4bb86db86079509e6159810ae9bd3e4)  
- 
+- [Capturing Wi-Fi WLAN Packets on Windows for Free! ](https://www.cellstream.com/2017/02/22/capturing-wi-fi-wlan-packets-on-windows-for-free/) 
+- [ Npcap Users' Guide ](https://npcap.com/guide/npcap-users-guide.html)
+
+

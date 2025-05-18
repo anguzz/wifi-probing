@@ -1,211 +1,132 @@
-function Write-Info {
-    param([string]$Message)
-    Write-Host "[INFO] $Message" -ForegroundColor Green
+
+# Function definitions for logging
+function Write-Info { param([string]$Message) Write-Host "[INFO] $Message" -ForegroundColor Green }
+function Write-Warning { param([string]$Message) Write-Host "[WARN] $Message" -ForegroundColor Yellow }
+function Write-ErrorMsg { param([string]$Message) Write-Host "[ERROR] $Message" -ForegroundColor Red }
+
+# Npcap configuration
+$npcapVersion = "1.82" # Consider checking for the latest version if issues persist
+$npcapUrl = "https://npcap.com/dist/npcap-$npcapVersion.exe"
+$installerPath = Join-Path -Path $env:TEMP -ChildPath "npcap-$npcapVersion-installer.exe"
+$wlanHelperPath = "C:\Windows\System32\Npcap\WlanHelper.exe" # Standard path
+
+# Check for Administrator privileges
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "This script needs to be run as Administrator to function correctly, especially for enabling monitor mode."
+    Write-Warning "Please re-run the script from an elevated PowerShell prompt."
+    # Uncomment the next line to exit if not admin, or handle it as a strong suggestion.
+    # Read-Host "Press Enter to exit..."; exit 1
 }
 
-function Write-Warning {
-    param([string]$Message)
-    Write-Host "[WARN] $Message" -ForegroundColor Yellow
-}
+Write-Info "Checking Npcap installation..."
+$npcapInstalled = Test-Path (Join-Path -Path ${env:ProgramFiles} -ChildPath "Npcap")
+$npfService = Get-Service -Name npf -ErrorAction SilentlyContinue
 
-function Write-ErrorMsg {
-    param([string]$Message)
-    Write-Host "[ERROR] $Message" -ForegroundColor Red
-}
-
-$npcapVersion = "1.82"
-$npcapDownloadUrl = "https://npcap.com/dist/npcap-$($npcapVersion).exe"
-$npcapInstallerName = "npcap-$($npcapVersion)-installer.exe"
-
-
-Write-Info "Starting Wi-Fi Sniffing Environment Checker for Windows..."
-Write-Info "This script requires Administrator privileges to run correctly."
-Write-Host ""
-
-function Check-NpcapStatus {
-    $npcapIsInstalled = $false
-    $npcapPath = "$env:ProgramFiles\Npcap" 
-    $npcapDriverService = Get-Service -Name npf -ErrorAction SilentlyContinue 
-
-    if (Test-Path $npcapPath) {
-        Write-Info "Npcap installation directory found at: $npcapPath"
-        
-        if ($null -ne $npcapDriverService) {
-            Write-Info "Npcap driver service ('npf') object found. Current Status: $($npcapDriverService.Status), StartType: $($npcapDriverService.StartType)"
-            if (($npcapDriverService.Status -eq "Running") -and ($npcapDriverService.StartType -ne "Disabled")) {
-                Write-Info "Npcap driver service ('npf') is running and enabled."
-                $npcapIsInstalled = $true
-            } else {
-                Write-Warning "Npcap driver service ('npf') is present but is NOT running or is disabled."
-                Write-Warning "Please ensure the 'Npcap Packet Driver (NPF)' service is started and its Start type is not 'Disabled' (e.g., set to Automatic or Manual)."
-                Write-Warning "You can check this in the Services application (services.msc)."
-            }
-        } else {
-            Write-Warning "Npcap driver service ('npf') was NOT detected."
-            Write-Warning "This indicates the Npcap driver might not be installed correctly, or the service is missing."
-            Write-Warning "Ensure Npcap was installed with administrator privileges and all components were installed."
-            Write-Warning "If you just installed Npcap, a system restart might be required for the service to be properly registered and started."
-        }
-    } else {
-        Write-ErrorMsg "Npcap installation directory NOT found at $npcapPath."
-        Write-Warning "This suggests Npcap is not installed."
-    }
-    return $npcapIsInstalled
-}
-
-
-Write-Info "Step 1: Checking for Npcap installation..."
-$npcapInstalled = Check-NpcapStatus
-
-if (-not $npcapInstalled) {
-    Write-ErrorMsg "Npcap does not appear to be installed or fully functional based on the checks above."
-    Write-Warning "For raw 802.11 packet capture (like probe requests), Npcap is essential on Windows."
-    
-    $choiceDownload = Read-Host "[PROMPT] Npcap is not detected correctly. Would you like to download the Npcap $npcapVersion installer? (yes/no)"
-    if ($choiceDownload -eq 'yes' -or $choiceDownload -eq 'y') {
-        Write-Info "Attempting to download Npcap $npcapVersion from $npcapDownloadUrl..."
-        $tempInstallerPath = Join-Path $env:TEMP $npcapInstallerName
+if (-not $npcapInstalled -or -not $npfService) {
+    Write-Warning "Npcap not detected or 'npf' service missing."
+    $response = Read-Host "[PROMPT] Download Npcap $npcapVersion now? (yes/no)"
+    if ($response -match '^y(es)?$') {
+        Write-Info "Downloading Npcap $npcapVersion..."
         try {
-            Invoke-WebRequest -Uri $npcapDownloadUrl -OutFile $tempInstallerPath -UseBasicParsing
-            Write-Info "Npcap installer downloaded to: $tempInstallerPath"
-            Write-Warning "Npcap installer has been downloaded."
-            Write-Warning "IMPORTANT: You must now run this installer MANUALLY."
-            Write-Warning "During the Npcap installation, ensure you select the following options:"
-            Write-Warning "  1. CHECK 'Support raw 802.11 traffic (and monitor mode) for wireless adapters'."
-            Write-Warning "  2. CHECK 'Install Npcap in WinPcap API-compatible Mode'."
-            Write-Warning "  (Optional but recommended: CHECK 'Restrict Npcap driver access to Administrators only')."
-            
-            $choiceOpen = Read-Host "[PROMPT] Would you like to open the downloaded Npcap installer now? (yes/no)"
-            if ($choiceOpen -eq 'yes' -or $choiceOpen -eq 'y') {
-                Start-Process -FilePath $tempInstallerPath
-                Write-Info "Npcap installer opened. Please complete the installation manually."
-            } else {
-                Write-Info "Please navigate to '$tempInstallerPath' and run the installer manually."
+            Invoke-WebRequest -Uri $npcapUrl -OutFile $installerPath -UseBasicParsing -ErrorAction Stop
+            Write-Info "Installer saved to $installerPath"
+            Write-Warning "Please run the installer manually with the following options checked:"
+            Write-Warning "- Support raw 802.11 traffic (and monitor mode) for wireless adapters"
+            Write-Warning "- Install Npcap in WinPcap API-compatible Mode"
+            Start-Process $installerPath
+            Read-Host "After installing Npcap (and rebooting, if required by the installer), press Enter to continue this script..."
+            # Re-check after installation attempt
+
+            #TODO FIGURE OUT PATH 
+            #TODO FIGURE OUT service name
+            $npcapInstalled = Test-Path (Join-Path -Path ${env:ProgramFiles} -ChildPath "Npcap")
+            $npfService = Get-Service -Name npf -ErrorAction SilentlyContinue
+            if (-not $npcapInstalled -or -not $npfService) {
+                Write-ErrorMsg "Npcap installation still not detected correctly. Please ensure it was installed with the recommended options. Exiting."
+                exit 1
             }
-            
-            Write-Warning "After you have MANUALLY installed Npcap with the correct options (and potentially restarted your PC if prompted by the installer or if issues persist), you can re-run this script to verify."
-            Read-Host "[PROMPT] Press Enter to continue this script after you have completed the Npcap installation (and any required restart)..."
-            $npcapInstalled = Check-NpcapStatus 
-            
-        } catch {
-            Write-ErrorMsg "An error occurred during Npcap download: $($_.Exception.Message)"
-            Write-ErrorMsg "Please try downloading and installing Npcap manually from https://npcap.com"
+            Write-Info "Npcap installation detected."
+        }
+        catch {
+            Write-ErrorMsg "Failed to download Npcap installer. Error: $($_.Exception.Message)"
+            Write-ErrorMsg "Please download and install Npcap manually from $npcapUrl with the options mentioned above."
+            exit 1
         }
     } else {
-        Write-Info "Npcap download skipped by user."
-        Write-Warning "Please install Npcap manually from https://npcap.com, ensuring the correct options are selected as detailed above."
-    }
-}
-
-if ($npcapInstalled) {
-    Write-Info "Npcap appears to be installed and the NPF service is running."
-    Write-Warning "CRITICAL REMINDER: For raw 802.11 capture, Npcap MUST have been installed with the following options selected:"
-    Write-Warning "  1. 'Support raw 802.11 traffic (and monitor mode) for wireless adapters'."
-    Write-Warning "  2. 'Install Npcap in WinPcap API-compatible Mode'."
-    Write-Warning "If you encounter issues capturing raw 802.11 frames, ensure Npcap was installed with these options. Reinstall Npcap if unsure."
-} else {
-    Write-ErrorMsg "Npcap is still not detected as fully functional. Your sniffing script will likely fail."
-    Write-ErrorMsg "Please ensure Npcap is installed correctly with the options mentioned above, and that the 'Npcap Packet Driver (NPF)' service is running."
-    Write-Warning "A system RESTART may be required after Npcap installation or if the NPF service is not starting."
-}
-Write-Host ""
-
-Write-Info "Step 2: Listing Wi-Fi adapters and checking for Monitor Mode support..."
-
-$allPhysicalAdapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-if ($allPhysicalAdapters) {
-    Write-Info "All physical network adapters found on this system (for diagnostic purposes):"
-    foreach ($physAdapter in $allPhysicalAdapters) {
-        Write-Host "  - Name: $($physAdapter.Name), Description: $($physAdapter.InterfaceDescription), MediaType: $($physAdapter.MediaType), Status: $($physAdapter.Status), ifIndex: $($physAdapter.ifIndex)"
+        Write-ErrorMsg "Npcap is required for this script. Exiting."
+        exit 1
     }
 } else {
-    Write-Warning "Could not retrieve any physical network adapters using Get-NetAdapter. This is unusual."
+    Write-Info "Npcap is installed and 'npf' service is present."
 }
 
-$wifiAdapters = $allPhysicalAdapters | Where-Object {
-    ($_.InterfaceDescription -like "*Wi-Fi*" -or $_.InterfaceDescription -like "*Wireless*" -or $_.Name -like "*Wi-Fi*" -or $_.Name -like "*Wireless*") -and 
-    $_.MediaType -eq "Native 802.11"
+Write-Info "Looking for active Wi-Fi adapters..."
+
+# Method 1: Using InterfaceType (more reliable)
+# InterfaceType 71 corresponds to IEEE 802.11 (Wi-Fi)
+$wifiAdapter = Get-NetAdapter -Physical | Where-Object {
+    $_.Status -eq 'Up' -and $_.InterfaceType -eq 71
+} | Select-Object -First 1
+
+# Method 2: Fallback to name/description matching if InterfaceType didn't find one
+if (-not $wifiAdapter) {
+    Write-Warning "No active Wi-Fi adapter found using InterfaceType 71. Trying name/description matching..."
+    $wifiAdapter = Get-NetAdapter -Physical | Where-Object {
+        $_.Status -eq 'Up' -and (
+            $_.InterfaceDescription -like "*Wi-Fi*" -or
+            $_.Name -like "*Wi-Fi*" -or
+            $_.InterfaceDescription -like "*Wireless*" -or # Broader search
+            $_.Name -like "*Wireless*"                     # Broader search
+        )
+    } | Select-Object -First 1
 }
 
-if ($wifiAdapters) {
-    Write-Info "Found the following potential Wi-Fi adapters for sniffing:"
-    foreach ($adapter in $wifiAdapters) {
-        Write-Host "--------------------------------------------------"
-        Write-Info "Adapter Name: $($adapter.Name)"
-        Write-Info "Description:  $($adapter.InterfaceDescription)"
-        Write-Info "Status:       $($adapter.Status)"
-        Write-Info "MAC Address:  $($adapter.MacAddress)"
-        Write-Info "Interface GUID: $($adapter.InterfaceGuid)"
-        Write-Info "Interface Index: $($adapter.ifIndex)"
-
-
-        if ($adapter.Status -ne "Up") {
-            Write-Warning "This Wi-Fi adapter is currently NOT 'Up' (Status: $($adapter.Status)). It may need to be enabled."
-        }
-
-        $netshOutput = netsh wlan show wirelesscapabilities interface="$($adapter.Name)" 2>$null
-        if ($LASTEXITCODE -eq 0 -and $netshOutput) {
-            if ($netshOutput -match "Network Monitor Mode\s+:\s+Supported") {
-                Write-Info "Monitor Mode: Supported (as reported by 'netsh wlan show wirelesscapabilities')"
-            } elseif ($netshOutput -match "Network Monitor Mode\s+:\s+Not supported") {
-                Write-Warning "Monitor Mode: Not Supported (as reported by 'netsh wlan show wirelesscapabilities')"
-                Write-Warning "This adapter may not be able to capture raw 802.11 frames from unassociated devices."
-            } else {
-                Write-Warning "Monitor Mode: Could not determine support from 'netsh wlan show wirelesscapabilities' output for this adapter."
-            }
-        } else {
-            Write-Warning "Monitor Mode: Could not retrieve wireless capabilities using 'netsh wlan show wirelesscapabilities' for this adapter (Interface: $($adapter.Name))."
-            Write-Warning "This might happen if the WLAN AutoConfig service (WlanSvc) is not running or the adapter is in a strange state."
-        }
-    }
-    Write-Host "--------------------------------------------------"
-    Write-Info "Your Python sniffing script (using Scapy) will need to use one of these adapter names or GUIDs."
-    Write-Info "The ability to capture raw 802.11 frames successfully depends on the adapter's driver, Npcap (correctly installed), and the 'Monitor Mode' support."
-} else {
-    Write-ErrorMsg "No Wi-Fi adapters suitable for sniffing were found after filtering."
-    Write-Warning "Ensure your Wi-Fi adapter is enabled in 'Network Connections' (ncpa.cpl), drivers are installed,"
-    Write-Warning "and its description or name contains 'Wi-Fi' or 'Wireless' and MediaType is 'Native 802.11'."
-    Write-Warning "If you have a Wi-Fi adapter but it's not listed here, review the full list of physical adapters printed above for clues."
+if (-not $wifiAdapter) {
+    Write-ErrorMsg "No active Wi-Fi adapter found. Please ensure your Wi-Fi adapter is enabled and connected (Status 'Up')."
+    Write-Info "You can list all physical adapters and their properties by running this command in PowerShell:"
+    Write-Info 'Get-NetAdapter -Physical | Select-Object Name, InterfaceDescription, Status, InterfaceType | Format-Table -AutoSize'
+    exit 1
 }
-Write-Host ""
 
-Write-Info "Step 3: Testing internet connectivity..."
-$pingTarget = "8.8.8.8" 
-$testConnectionResult = $false
+Write-Info "Found adapter: $($wifiAdapter.Name) (Description: $($wifiAdapter.InterfaceDescription), Status: $($wifiAdapter.Status))"
+
+if (-not (Test-Path $wlanHelperPath)) {
+    Write-ErrorMsg "Npcap WlanHelper.exe not found at $wlanHelperPath. Npcap might not be installed correctly or the path is wrong."
+    exit 1
+}
+
+Write-Info "Attempting to enable monitor mode on '$($wifiAdapter.Name)'..."
+# Construct arguments carefully. The adapter name might contain spaces.
+$arguments = """$($wifiAdapter.Name)"" mode monitor"
+Write-Info "Executing: $wlanHelperPath $arguments"
+
 try {
-    $pingResult = Test-Connection -ComputerName $pingTarget -Count 2 -Quiet -ErrorAction SilentlyContinue
-    if ($pingResult) {
-        $testConnectionResult = $true
-        Write-Info "Internet connectivity test to $pingTarget Succeeded (ICMP Echo Reply received)."
+    # Start-Process will inherit admin rights if the script is run as admin.
+    $process = Start-Process -FilePath $wlanHelperPath -ArgumentList $arguments -Wait -NoNewWindow -PassThru -ErrorAction Stop
+    if ($process.ExitCode -ne 0) {
+        Write-Warning "WlanHelper.exe exited with code $($process.ExitCode). This might indicate an issue enabling monitor mode."
+        Write-Warning "Make sure you are running this script as Administrator and that your adapter supports monitor mode with Npcap."
+    } else {
+        Write-Info "WlanHelper.exe executed. Monitor mode *should* now be enabled on '$($wifiAdapter.Name)'."
+        Write-Info "Note: Not all adapters/drivers successfully enter monitor mode even if WlanHelper reports success."
     }
-} catch {} 
-
-if (-not $testConnectionResult) {
-    Write-Warning "Internet connectivity test to $pingTarget Failed."
-    Write-Warning "If your sniffing tool needs to make API calls (e.g., to WiGLE), it may fail without internet."
 }
-Write-Host ""
+catch {
+    Write-ErrorMsg "Failed to execute WlanHelper.exe. Error: $($_.Exception.Message)"
+    Write-Warning "Ensure Npcap is installed correctly and you are running the script as Administrator."
+    exit 1
+}
 
-Write-Info "Step 4: Summary and Advice"
-Write-Info "--------------------------"
-if ($npcapInstalled) {
-    Write-Info "Npcap is detected, and the NPF service appears to be running. This is good."
+Write-Info "Verifying monitor mode status by checking internet connectivity..."
+# This test is indicative, not definitive.
+# Some setups might retain connectivity or lose it for other reasons.
+if (Test-Connection -ComputerName 8.8.8.8 -Count 2 -Quiet -ErrorAction SilentlyContinue) {
+    Write-Warning "Internet connection seems to be reachable. Monitor mode might *not* be fully enabled, or your setup allows connectivity in monitor mode."
+    Write-Warning "True monitor mode often disrupts normal data traffic on the interface."
 } else {
-    Write-ErrorMsg "Npcap is a critical prerequisite and is NOT detected as fully functional."
-    Write-ErrorMsg "Please ensure Npcap is installed with the options mentioned earlier in this script, and the NPF service is running."
-    Write-Warning "A system RESTART is often required after installing Npcap for the driver and service to function correctly."
+    Write-Info "Internet connection is not reachable. This suggests monitor mode is likely enabled."
 }
 
-Write-Info "When running your Python sniffing script (e.g., with Scapy):"
-Write-Info " - Scapy will use Npcap to attempt to capture raw 802.11 frames."
-Write-Info " - Success depends on your Wi-Fi adapter driver supporting this mode via Npcap."
-Write-Info " - If an adapter showed 'Monitor Mode: Supported' via netsh, it has a higher chance of working, assuming Npcap is correctly installed."
-
-Write-Info "Regarding internet connectivity while sniffing on Windows:"
-Write-Info " - It *may* be possible to sniff raw 802.11 frames AND maintain internet on the SAME Wi-Fi adapter."
-Write-Info " - This is highly dependent on the adapter, driver, and Npcap's interaction."
-Write-Info " - If you lose internet when sniffing starts, you might need to:"
-Write-Info "   a) Use a separate network interface for internet (e.g., Ethernet, a second Wi-Fi adapter)."
-Write-Info "   b) Implement batch processing in your Python script (sniff offline, then connect to upload data)."
-Write-Host ""
-Write-Info "Script finished. Please review the messages above."
+Write-Info "Script finished. To disable monitor mode, you can try running:"
+Write-Info "$wlanHelperPath ""$($wifiAdapter.Name)"" mode managed"
+Write-Info "Or, often, disabling and re-enabling the Wi-Fi adapter in Network Connections resets it."
