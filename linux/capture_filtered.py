@@ -7,8 +7,7 @@ import threading
 import itertools
 from scapy.all import sniff, Dot11, Dot11ProbeReq, RadioTap
 
-# --- Configuration ---
-IFACE = "wlp0s20f3mon" #for example, add your interface
+IFACE = "wlan0mon" #for example, add your interface
 CHANNELS_2_4GHZ = list(range(1, 15))
 CHANNELS_5GHZ = [36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165]
 CHANNELS_TO_SCAN = CHANNELS_2_4GHZ  + CHANNELS_5GHZ
@@ -20,10 +19,20 @@ channel_lock = threading.Lock()
 current_channel_index = 0
 
 def load_mac_vendors(filepath=None):
-    if filepath is None:
-        filepath = os.path.join(os.path.dirname(__file__), "..", "utils", "mac-vendor.txt")
-
     vendors = {}
+    if filepath is None:
+        script_dir = os.path.dirname(__file__)
+        local_mac_vendor_path = os.path.join(script_dir, "mac-vendor.txt")
+        utils_mac_vendor_path = os.path.join(script_dir, "..", "utils", "mac-vendor.txt")
+
+        if os.path.exists(local_mac_vendor_path):
+            filepath = local_mac_vendor_path
+        elif os.path.exists(utils_mac_vendor_path):
+            filepath = utils_mac_vendor_path
+        else:
+            print(f"[WARNING] mac-vendor.txt not found in default locations. Please ensure it's available.")
+            return {}  
+
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             for line in f:
@@ -36,10 +45,13 @@ def load_mac_vendors(filepath=None):
                     vendor = parts[1].strip()
                     if len(oui) == 6:
                         vendors[oui] = vendor
-        print(f"[INFO] Loaded {len(vendors)} MAC vendor prefixes from {filepath}")
+        print(f"[INFO] Loaded {len(vendors)} MAC vendor prefixes.")
     except Exception as e:
-        print(f"[ERROR] Could not load vendor file '{filepath}': {e}")
-    return vendors
+        print(f"[ERROR] Could not load vendor file: {e}")
+
+    return vendors  
+
+
 
 def lookup_vendor(mac, vendors_dict):
     normalized_mac = mac.replace(":", "").replace("-", "").lower()
@@ -64,7 +76,6 @@ def print_channel_header(index, total):
     print("-" * 40)
 
 
-# --- Channel Hopping Thread ---
 def hop_channels(run_event):
     global current_channel_index
     for channel in itertools.cycle(CHANNELS_TO_SCAN):
@@ -75,18 +86,23 @@ def hop_channels(run_event):
         subprocess.run(['sudo', 'iw', 'dev', IFACE, 'set', 'channel', str(channel)],
                        capture_output=True, text=True)
         print_channel_header(current_channel_index, len(CHANNELS_TO_SCAN))
-        time.sleep(3)
+        time.sleep(.5)
 
-# --- Packet Handler ---
 def packet_handler(pkt):
     if pkt.haslayer(Dot11ProbeReq):
-        ssid = pkt[Dot11ProbeReq].info.decode(errors='ignore').strip() or "BROADCAST (WILDCARD)"
+        ssid_raw = pkt[Dot11ProbeReq].info
+        ssid = ssid_raw.decode(errors='ignore').strip() if ssid_raw else ""
+
+        if not ssid:
+            return
+
         mac = pkt.addr2 or "FF:FF:FF:FF:FF:FF"
         vendor = lookup_vendor(mac, VENDOR_DICT)
         signal = pkt[RadioTap].dBm_AntSignal if pkt.haslayer(RadioTap) and hasattr(pkt[RadioTap], 'dBm_AntSignal') else "N/A"
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         print(f"{timestamp} | MAC: {mac} | Vendor: {vendor} | SSID: '{ssid}' | RSSI: {signal}")
         append_to_csv([timestamp, mac, vendor, ssid, signal])
+
 
 # --- Main ---
 if __name__ == "__main__":
@@ -97,7 +113,7 @@ if __name__ == "__main__":
     os.system("clear")
     print("Wi-Fi Probe Sniffer (Threaded Hopping) — Running...\n")
 
-    VENDOR_DICT = load_mac_vendors("mac-vendor.txt")
+    VENDOR_DICT = load_mac_vendors()
     setup_csv_file()
 
     run_event = threading.Event()

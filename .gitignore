@@ -1,4 +1,5 @@
 __pycache__
 .env
 linux/probe_requests_log.csv
+linux/probe_requests_with_wigle_loc.csv
 windows/probe_requests_log.csv
