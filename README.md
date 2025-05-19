@@ -1,6 +1,7 @@
 # Overview
 
-A CLI-based exploration into wireless probe request capturing and geolocation inference. Inspired by a wireless hacking presentation at [IVU ](https://www.irvineunderground.org/) by [alexlynd](https://github.com/AlexLynd?tab=repositories), this repo captures Wi-Fi probe requests, identifies SSIDs devices seek, and correlates these SSIDs with physical locations via WiGLE. It's created strictly for educational and research purposes.
+A CLI-based exploration into wireless probe request capturing and geolocation inference. Inspired by a wireless hacking presentation at [IVU ](https://www.irvineunderground.org/) by [alexlynd](https://github.com/AlexLynd?tab=repositories), this repo captures Wi-Fi probe requests, identifies SSIDs devices seek, and correlates these SSIDs with physical locations via WiGLE. 
+
 
 
 ##  Directory structure
@@ -100,9 +101,14 @@ Some stuff I read while tinkering with this.
 - `capture_probe_csv`
 ![image](https://github.com/user-attachments/assets/64a2c424-5e3a-4a2b-8271-8b98e7c69574)
 
+
 - `run_wigle_on_csv.py`
   ![image](https://github.com/user-attachments/assets/f9752679-ffc3-4d57-a3b9-ef05361840c3)
 
 - `probe_requests_with_wigle_loc.csv`
 ![image](https://github.com/user-attachments/assets/0723315e-4e53-4282-a505-e7cddbf0c2c6)
+
+
+Disclaimer:
+This project is intended for educational and research purposes only. Do not use it for unauthorized network monitoring or data collection. Always ensure you have proper permission before scanning wireless networks.
 
