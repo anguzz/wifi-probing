@@ -45,7 +45,7 @@ Steps:
  1) Option 1: Use a NIC supporting Virtual Functions (VFs).
  2) Option 2: Use dual NIC setup one for monitoring, one for internet connectivity.
 - Rate limiting on WiGLE poses a current challenge, so I'll need to look into workarounds or ways to increase maximum daily API calls.
-
+- Make the menu more comprehensive, better formatted. 
 
 ### Target setup 
 Raspberry Pi 3B with ALFA Network AWUS036ACM Wi-Fi dongle, touch screen LCD, and battery power for portability. Aim to streamline scripts for NIC configuration, automated packet capture, and real-time display at system startup.
@@ -86,4 +86,22 @@ Some stuff I read while tinkering with this.
 - [Capturing Wi-Fi WLAN Packets on Windows for Free! ](https://www.cellstream.com/2017/02/22/capturing-wi-fi-wlan-packets-on-windows-for-free/) 
 - [ Npcap Users' Guide ](https://npcap.com/guide/npcap-users-guide.html)
 
+  # Preview
+  Below is a preview of screenshots on current usage.
+
+- `configure_nic.sh`    
+ ![image](https://github.com/user-attachments/assets/753f0be4-6a20-42c1-9976-a401b15f889d)
+
+
+- `capture.py`
+![image](https://github.com/user-attachments/assets/25186138-14a7-4efd-912f-76d835fec3bd)
+
+- `capture_probe_csv`
+![image](https://github.com/user-attachments/assets/64a2c424-5e3a-4a2b-8271-8b98e7c69574)
+
+- `run_wigle_on_csv.py`
+  ![image](https://github.com/user-attachments/assets/f9752679-ffc3-4d57-a3b9-ef05361840c3)
+
+- `probe_requests_with_wigle_loc.csv`
+![image](https://github.com/user-attachments/assets/0723315e-4e53-4282-a505-e7cddbf0c2c6)
 
