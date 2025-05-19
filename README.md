@@ -1,6 +1,7 @@
 # Overview
 
-A CLI-based exploration into wireless probe request capturing and geolocation inference. Inspired by a wireless hacking presentation at [IVU ](https://www.irvineunderground.org/) by [alexlynd](https://github.com/AlexLynd?tab=repositories), this repo captures Wi-Fi probe requests, identifies SSIDs devices seek, and correlates these SSIDs with physical locations via WiGLE.
+A CLI-based exploration into wireless probe request capturing and geolocation inference. Inspired by a wireless hacking presentation at [IVU ](https://www.irvineunderground.org/) by [alexlynd](https://github.com/AlexLynd?tab=repositories), this repo captures Wi-Fi probe requests, identifies SSIDs devices seek, and correlates these SSIDs with physical locations via WiGLE. It's created strictly for educational and research purposes.
+
 
 ##  Directory structure
 ```powershell
